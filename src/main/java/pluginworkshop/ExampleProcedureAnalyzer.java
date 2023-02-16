@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Date;
+import java.util.Map;
 import java.util.Set;
 
 public class ExampleProcedureAnalyzer implements IProcedureAnalyzer {
@@ -132,4 +133,28 @@ public class ExampleProcedureAnalyzer implements IProcedureAnalyzer {
         logger.info("Erfolgreich gespeichert!");
     }
 
+    /**
+     * Return Hello Message for given name or greet unknown user.
+     * Usage in script:
+     *
+     * <pre>
+     *      executePluginMethod(
+     *          'ExampleProcedureAnalyzer',
+     *          'hello',
+     *          { name: 'Onkostar' },
+     *          function (result) {console.log(result);},
+     *          false
+     *      );
+     * </pre>
+     *
+     * @param input The data Map
+     * @return The hello message
+     */
+    public String hello(final Map<String, String> input) {
+        var name = input.get("name");
+        if (null != name) {
+            return "Hallo, " + name + "!";
+        }
+        return "Hallo du unbekannter Benutzer!";
+    }
 }
