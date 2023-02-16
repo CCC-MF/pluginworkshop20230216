@@ -1,8 +1,6 @@
 package pluginworkshop;
 
-import de.itc.onkostar.api.Disease;
-import de.itc.onkostar.api.IOnkostarApi;
-import de.itc.onkostar.api.Procedure;
+import de.itc.onkostar.api.*;
 import de.itc.onkostar.api.analysis.AnalyseTriggerEvent;
 import de.itc.onkostar.api.analysis.AnalyzerRequirement;
 import de.itc.onkostar.api.analysis.IProcedureAnalyzer;
@@ -11,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.Date;
 import java.util.Set;
 
 public class ExampleProcedureAnalyzer implements IProcedureAnalyzer {
@@ -67,7 +66,31 @@ public class ExampleProcedureAnalyzer implements IProcedureAnalyzer {
      */
     @Override
     public boolean isRelevantForAnalyzer(Procedure procedure, Disease disease) {
-        return null != procedure;
+        return null != procedure && procedure.getFormName().equals("OS.Diagnose.VarianteUKW");
+    }
+
+    @Override
+    public boolean isSynchronous() {
+        return false;
+    }
+
+    @Override
+    public AnalyzerRequirement getRequirement() {
+        return AnalyzerRequirement.PROCEDURE;
+    }
+
+    /**
+     * Returns set of trigger events.
+     * This example will limit execution of {@link #analyze(Procedure, Disease)} to save event after editing data.
+     * If not overridden, this method defaults to all {@link AnalyseTriggerEvent}s.
+     *
+     * @return Set of trigger events
+     */
+    @Override
+    public Set<AnalyseTriggerEvent> getTriggerEvents() {
+        return Set.of(
+                AnalyseTriggerEvent.EDIT_SAVE
+        );
     }
 
     /**
@@ -91,38 +114,22 @@ public class ExampleProcedureAnalyzer implements IProcedureAnalyzer {
     public void analyze(Procedure procedure, Disease disease) {
         logger.info("Run 'ExampleProcedureAnalyzer.analyze()'");
 
-        var patient = procedure.getPatient();
+        var newProcedure = new Procedure(onkostarApi);
+        newProcedure.setPatientId(procedure.getPatientId());
+        newProcedure.setProcedureType(ProcedureType.OBSERVATION);
+        newProcedure.setFormName("Test");
+        newProcedure.setStartDate(new Date());
 
-        patient.getDiseases().forEach(patientDisease -> {
-            var icd10code = patientDisease.getIcd10Code();
-            // Example log! Do not use in production - personal information!
-            logger.info("Found Disease {} for Patient {}", icd10code, patient.getId());
+        newProcedure.setValue("datum", new Item("datum", new Date()));
 
-            // Do something with this data ...
-        });
+        try {
+            onkostarApi.saveProcedure(newProcedure, false);
+        } catch (Exception e) {
+            logger.error("Fehler beim Speichern", e);
+            return;
+        }
+
+        logger.info("Erfolgreich gespeichert!");
     }
 
-    @Override
-    public boolean isSynchronous() {
-        return false;
-    }
-
-    @Override
-    public AnalyzerRequirement getRequirement() {
-        return AnalyzerRequirement.ENTRY;
-    }
-
-    /**
-     * Returns set of trigger events.
-     * This example will limit execution of {@link #analyze(Procedure, Disease)} to save event after editing data.
-     * If not overridden, this method defaults to all {@link AnalyseTriggerEvent}s.
-     *
-     * @return Set of trigger events
-     */
-    @Override
-    public Set<AnalyseTriggerEvent> getTriggerEvents() {
-        return Set.of(
-                AnalyseTriggerEvent.EDIT_SAVE
-        );
-    }
 }
